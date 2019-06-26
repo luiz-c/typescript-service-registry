@@ -1,4 +1,5 @@
 import * as semver from 'semver';
+import Config from '../../config';
 
 class ServiceRegistry {
   private log;
@@ -10,7 +11,7 @@ class ServiceRegistry {
   constructor (log) {
     this.log = log;
     this.services = {};
-    this.timeout = 30;
+    this.timeout = Config.serviceTimeout;
   }
 
   get (name: string, version: string): Object {

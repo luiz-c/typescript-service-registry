@@ -6,7 +6,7 @@ class Config {
 
     private version;
 
-    private readonly serviceTimeout: number = 30;
+    public static readonly serviceTimeout: number = 30;
 
     public log;
 
