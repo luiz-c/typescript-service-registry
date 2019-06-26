@@ -1,0 +1,8 @@
+memcached:
+    container_name: memcached
+    image: memcached:1.5.16-alpine
+    ports:
+        - "11211:11211"
+    environment:
+        # Set MEMCACHED size to 64Mb
+        - MEMCACHED_MEMORY_LIMIT=64

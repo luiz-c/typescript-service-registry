@@ -1,60 +1,90 @@
 import * as semver from 'semver';
 import Config from '../../config';
+import MemcachePlus from 'memcache-plus';
 
 class ServiceRegistry {
   private log;
+  private readonly SERVICES_KEY = 'services';
 
-  private services;
-
-  private timeout;
+  private memcached;
 
   constructor (log) {
+
     this.log = log;
-    this.services = {};
-    this.timeout = Config.serviceTimeout;
+
+    this.memcached = new MemcachePlus(Config.memcachedServers);
   }
 
-  get (name: string, version: string): Object {
-    this.cleanup();
-    const candidates = Object.values(this.services)
+  async get (name: string, version: string): Promise<Object> {
+    let services = await this.getMemcachedServices();
+    services = this.cleanup(services);
+
+    const candidates = Object.values(services)
       .filter((service: any) => service.name === name && semver.satisfies(service.version, version));
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
-  register (name: string, version: string, ip: string, port: string): string {
+  async register (name: string, version: string, ip: string, port: string): Promise<string> {
     const key = name + version + ip + port;
     let action = 'Updated';
 
-    if (!this.services[key]) {
-      this.services[key] = {};
-      this.services[key].ip = ip;
-      this.services[key].port = port;
-      this.services[key].name = name;
-      this.services[key].version = version;
+    let services = await this.getMemcachedServices();
+
+    if (!services[key]) {
+      services[key] = {};
+      services[key].ip = ip;
+      services[key].port = port;
+      services[key].name = name;
+      services[key].version = version;
       action = 'Added';
     }
 
-    this.services[key].timestamp = Math.floor(new Date().getTime() / 1000);
+    services[key].timestamp = Math.floor(new Date().getTime() / 1000);
+
+    await this.saveToMemcached(services);
+
     this.log.debug(`${action} service ${name}, version ${version} at ${ip}:${port}`);
+    
     return key;
   }
 
-  unregister (name: string, version: string, ip: string, port: string): string {
+  async unregister (name: string, version: string, ip: string, port: string): Promise<string> {
     const key = name + version + ip + port;
-    delete this.services[key];
+    let services = await this.getMemcachedServices();
+    delete services[key];
+    await this.saveToMemcached(services);
     this.log.debug(`Unregistered services ${name}, version ${version} at ${ip}:${port}`);
     return key;
   }
 
-  cleanup (): void {
+  async getMemcachedServices(): Promise<Object> {
+    let services = await this.memcached.get(this.SERVICES_KEY);
+    if (services) {
+      services = JSON.parse(services);
+    } else {
+      services = {};
+    }
+    return services;
+  }
+
+  async saveToMemcached(services: Object): Promise<string> {
+    return this.memcached.set(this.SERVICES_KEY, JSON.stringify(services), Config.serviceTimeout);
+  }
+
+  cleanup(services) {
     const now = Math.floor(new Date().getTime() / 1000);
-    Object.keys(this.services).forEach((key) => {
-      if (this.services[key].timestamp + this.timeout < now) {
-        delete this.services[key];
+    Object.keys(services).forEach((key) => {
+      if (services[key].timestamp + Config.serviceTimeout < now) {
+        delete services[key];
         this.log.debug(`Removed service ${key}`);
       }
-    });
+   });
+
+   this.saveToMemcached(services);
+
+   return services;
   }
+
 }
 
 export default ServiceRegistry;

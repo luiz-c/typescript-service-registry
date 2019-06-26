@@ -8,6 +8,8 @@ class Config {
 
     public static readonly serviceTimeout: number = 30;
 
+    public static readonly memcachedServers: string = 'localhost';
+
     public log;
 
     constructor (level: string) {

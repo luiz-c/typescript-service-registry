@@ -42,13 +42,13 @@ class Server {
       });
     });
 
-    router.put('/register/:name/:version/:port', (req, res) => {
+    router.put('/register/:name/:version/:port', async (req, res) => {
       const { name, version, port } = req.params;
 
       const serviceip = req.connection.remoteAddress
         .includes('::') ? `[${req.connection.remoteAddress}]` : req.connection.remoteAddress;
 
-      const serviceKey = this.serviceRegistry.register(name, version, serviceip, port);
+      const serviceKey = await this.serviceRegistry.register(name, version, serviceip, port);
 
       return res.json({ result: serviceKey });
     });
@@ -64,9 +64,9 @@ class Server {
       return res.json({ result: serviceKey });
     });
 
-    router.get('/find/:name/:version', (req, res) => {
+    router.get('/find/:name/:version', async (req, res) => {
       const { name, version } = req.params;
-      const svc = this.serviceRegistry.get(name, version);
+      const svc = await this.serviceRegistry.get(name, version);
       if (!svc) {
         return res.status(404).json({ result: 'Service not found' });
       }
