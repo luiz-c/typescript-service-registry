@@ -29,7 +29,7 @@
   "dependencies": {
     "@types/node": "~10.10.3",
     "bunyan": "^1.8.12",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "get-port": "^5.0.0",
     "nodemon": "^1.19.1",
     "semver": "^6.1.2"
